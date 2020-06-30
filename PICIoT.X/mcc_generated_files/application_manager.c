@@ -64,6 +64,7 @@ static uint8_t toggleState = 0;
 // This will contain the device ID, before we have it this dummy value is the init value which is non-0
 char attDeviceID[20] = "BAAAAADD1DBAAADD1D";
 char mqttSubscribeTopic[SUBSCRIBE_TOPIC_SIZE];
+char tutorialMqttTopic[SUBSCRIBE_TOPIC_SIZE];
 ATCA_STATUS retValCryptoClientSerialNumber;
 static uint8_t holdCount = 0;
 
@@ -114,6 +115,25 @@ static void sendToCloud(void)
     }
 }
 
+static void sendButtonPressToCloud(){
+    // Ensure that we have a valid cloud connection
+    if (shared_networking_params.haveAPConnection)
+    {
+        static char tutorialPayload[PAYLOAD_SIZE];
+        int tutorialLen = 0;
+
+        // Set MQTT topic
+        memset((void*)tutorialMqttTopic, 0, sizeof(tutorialMqttTopic));
+        sprintf(tutorialMqttTopic, "buttonPresses");
+
+        // Construct payload
+        tutorialLen = sprintf(tutorialPayload,"{\"thing_name\":\"%s\"}", cid);
+
+        // Publish data to cloud
+        CLOUD_publishData((uint8_t*)tutorialMqttTopic ,(uint8_t*)tutorialPayload, tutorialLen);
+    }
+}
+
 //This handles messages published from the MQTT server when subscribed
 static void receivedFromCloud(uint8_t *topic, uint8_t *payload)
 {
@@ -155,6 +175,9 @@ void application_init()
 
     // Initialization of modules before interrupts are enabled
     SYSTEM_Initialize();
+    
+    // Set interrupt handler for button presses
+    SW0_SetInterruptHandler(sendButtonPressToCloud);
 
     // Blocking debounce
     timeout_flushAll();
@@ -263,10 +286,17 @@ void application_init()
     subscribeToCloud();
 }
 
+static void receiveButtonPressFromCloud(uint8_t *topic, uint8_t *payload){
+    LED_test();
+    LED_test();
+}
+
 static void subscribeToCloud(void)
 {
     sprintf(mqttSubscribeTopic, "$aws/things/%s/shadow/update/delta", cid); 
     CLOUD_registerSubscription((uint8_t*)mqttSubscribeTopic,receivedFromCloud);
+    sprintf(tutorialMqttTopic, "buttonPresses");
+    CLOUD_registerSubscription((uint8_t*)tutorialMqttTopic,receiveButtonPressFromCloud);
 }
 
 static void setToggleState(uint8_t passedToggleState)

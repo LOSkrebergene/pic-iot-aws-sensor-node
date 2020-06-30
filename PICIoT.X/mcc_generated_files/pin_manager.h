@@ -2298,6 +2298,7 @@ void PIN_MANAGER_Initialize (void);
     </code>
 */
 void INT_SetInterruptHandler(void (* InterruptHandler)(void));
+void SW0_SetInterruptHandler(void (* InterruptHandler)(void));
 
 
 #endif

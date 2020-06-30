@@ -57,6 +57,7 @@
  Section: File specific functions
 */
 void (*INT_InterruptHandler)(void) = NULL;
+void (*SW0_InterruptHandler)(void) = NULL;
 
 /**
  Section: Driver Interface Function Definitions
@@ -119,10 +120,12 @@ void PIN_MANAGER_Initialize (void)
      * Interrupt On Change: negative
      ***************************************************************************/
     IOCNAbits.IOCNA12 = 1;    //Pin : RA12
+    IOCNAbits.IOCNA7 = 1;     //Pin : RA7
     /****************************************************************************
      * Interrupt On Change: flag
      ***************************************************************************/
     IOCFAbits.IOCFA12 = 0;    //Pin : RA12
+    IOCFAbits.IOCFA7 = 0;     //Pin : RA7
     /****************************************************************************
      * Interrupt On Change: config
      ***************************************************************************/
@@ -142,6 +145,12 @@ void INT_SetInterruptHandler(void (* InterruptHandler)(void))
     IEC1bits.IOCIE = 1; //Enable IOCI interrupt
 }
 
+void SW0_SetInterruptHandler(void (* InterruptHandler)(void))
+{
+    IEC1bits.IOCIE = 0; //Disable IOCI interrupt
+    SW0_InterruptHandler = InterruptHandler;
+    IEC1bits.IOCIE = 1; //Enable IOCI interrupt
+}
 
 /* Interrupt service routine for the IOCI interrupt. */
 void __attribute__ (( interrupt, no_auto_psv )) _IOCInterrupt ( void )
@@ -153,9 +162,19 @@ void __attribute__ (( interrupt, no_auto_psv )) _IOCInterrupt ( void )
         if(IOCFAbits.IOCFA12 == 1)
         {
             IOCFAbits.IOCFA12 = 0;  //Clear flag for Pin - RA12
-            if(INT_InterruptHandler) 
-            { 
-                INT_InterruptHandler(); 
+            if(INT_InterruptHandler)
+            {
+                INT_InterruptHandler();
+            }
+        }
+
+        // Handle SW0 button presses
+        if(IOCFAbits.IOCFA7 == 1)
+        {
+            IOCFAbits.IOCFA7 = 0;  //Clear flag for Pin - RA7
+            if(SW0_InterruptHandler)
+            {
+                SW0_InterruptHandler();
             }
         }
     }
